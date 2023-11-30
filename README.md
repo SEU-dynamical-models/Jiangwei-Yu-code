@@ -1,2 +1,2 @@
 # MasterProject
-all projects during my master study
+this is a folder with all projects during my master study
