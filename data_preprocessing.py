@@ -67,46 +67,121 @@ for i in range(1,subject_num+1):
         #set default onset and offset 设置onset和offset的默认值
         onset = 10
         offset = int(raw.tmax)
+        onsetsamp = 5000
+        offsetsamp = 6000
         #for ummc data, read the annotations for onset and offset 对于ummc文件，直接读取标注获得onset和offset
         if dataset == "ummc":
-            ann = raw.annotations.onset
-            onset = ann[1]
-            offset = ann[2]
+            df = pd.read_csv(tsv_data, delimiter='\t')
+            onset = df.loc[0]["onset"]#不算表头
+            onsetsamp = df.loc[0]["sample"]
+            offset = df.loc[1]["onset"]#不算表头
+            offsetsamp = df.loc[1]["sample"]
         #for umf data, pt data and jh data, read .tsv file for onset and offset 对于umf,pt,jh数据，读取tsv文件获得onset和offset
         if dataset == "umf":
             df = pd.read_csv(tsv_data, delimiter='\t')
             for row in df.index:
                 if df.loc[row]["trial_type"] == "eeg sz start":
                     onset = df.loc[row]["onset"]
+                    onsetsamp = df.loc[row]["sample"]
                 if df.loc[row]["trial_type"] == "eeg sz end":
                     offset = df.loc[row]["onset"]
+                    offsetsamp = df.loc[row]["sample"]
                     break
         if dataset == "pt" or dataset == "jh":
             df = pd.read_csv(tsv_data, delimiter='\t')
             for row in df.index:
                 if df.loc[row]["trial_type"] == "onset":
                     onset = df.loc[row]["onset"]
+                    onsetsamp = df.loc[row]["sample"]
                 if df.loc[row]["trial_type"] == "offset":
                     offset = df.loc[row]["onset"]
+                    offsetsamp = df.loc[row]["sample"]
                     break
-        raw.plot(scalings=4e-4,n_channels=129,duration=10)
+        raw.plot(scalings=4e-4,n_channels=60)
         plt.tight_layout()
         plt.show(block=True)#show raw data 展示原数据
         spectrum = raw.compute_psd()
-        spectrum.plot(average=True)
+        spectrum.plot()
         plt.tight_layout()
         plt.show(block=True)
 
+        hl_data = raw.copy().filter(h_freq=high_freq, l_freq=low_freq)  # high-low pass filter 高-低通滤波
+        # hl_data.plot(scalings=4e-4,n_channels=60)
+        # plt.tight_layout()
+        # plt.show(block=True)  # show data after high-low pass filter 展示高-低通滤波后的数据
+        # spectrum_hl = hl_data.compute_psd()
+        # spectrum_hl.plot()
+        # plt.tight_layout()
+        # plt.show(block=True)
+
+        notch_data = hl_data.copy().notch_filter(freqs=PLF)  # removing powerline noise 去除工频噪音
+        # notch_data.plot(scalings=4e-4,n_channels=60)
+        # plt.tight_layout()
+        # plt.show(block=True)  # show data after removing powerline noise 展示去除工频后的数据
+        # spectrum_pl = notch_data.compute_psd()
+        # spectrum_pl.plot()
+        # plt.tight_layout()
+        # plt.show(block=True)
+
+        # drop bad channels based on the record 根据记录文件去除坏道
+        drop_ch_data = notch_data.copy()
+        if sheet1.cell(row=bad_channel_start + i, column=2).value != None:
+            drop_chan = sheet1.cell(row=bad_channel_start + i, column=2).value.split(",")
+            if dataset == "ummc":
+                drop_chan.append('EVENT')
+            drop_ch_data = drop_ch_data.drop_channels(drop_chan)
+            # drop_ch_data.plot(scalings=4e-4,n_channels=60)
+            # plt.tight_layout()
+            # plt.show(block=True)  # show data after cropping and dropping channels 展示截取后的数据
+            # spectrum_drop = drop_ch_data.compute_psd()
+            # spectrum_drop.plot()
+            # plt.tight_layout()
+            # plt.show(block=True)
+
+        # rereferencing with common average reference  通过全局平均参考进行重参考
+        rereferenced_data, ref_data = mne.set_eeg_reference(drop_ch_data, copy=True)
+        # rereferenced_data.plot(scalings=4e-4,n_channels=60)
+        # plt.tight_layout()
+        # plt.show(block=True)  # show the data after rereferencing 展示重参考后的数据
+        # spectrum_ref = rereferenced_data.compute_psd()
+        # spectrum_ref.plot()
+        # plt.tight_layout()
+        # plt.show(block=True)
+
+        # in case there are less than 10 seconds shift before onset 避免有的run中onset前不足10秒
+        # crop_data = rereferenced_data.copy().crop(tmin=max(onset + onset_shift, 0), tmax=offset)
+        # onset_annotation = 10  # marking the onset to the processed data 为处理后的文件记录新的onset位置
+        # if max(onset + onset_shift, 0) == 0:
+        #     onset_annotation = onset
+        # crop_data.plot(scalings=4e-4,n_channels=60)
+        # plt.tight_layout()
+        # plt.show(block=True)  # show data after cropping and dropping channels 展示截取后的数据
+        # spectrum_crop = crop_data.compute_psd()
+        # spectrum_crop.plot()
+        # plt.tight_layout()
+        # plt.show(block=True)
+
         # baseline correction 基线校正
-        baseline_start = onset - 5
-        baseline_end = onset - 1
+        # baseline_start = onset_annotation - 5
+        # baseline_end = onset_annotation - 1
+        # if max(onset_annotation - 5, 0) == 0:
+        #     baseline_start = 0
+        baseline_start = -5
+        baseline_end = -1
+        tmin, tmax = onset_shift, offset - onset
+        onset_annotation = -onset_shift  # marking the onset to the processed data 为处理后的文件记录新的onset位置
         if max(onset + onset_shift, 0) == 0:
-            baseline_start = 0
+            onset_annotation = onset
+            tmin = -onset
+        if max(onset_annotation - 5, 0) == 0:
+            baseline_start = -onset_annotation
         baseline = (baseline_start, baseline_end)
-        epochs = mne.make_fixed_length_epochs(raw, duration=int(raw.tmax),preload=True)#make one epoch 做成1个epoch
-        epochs.apply_baseline(baseline)
-        # epochs.average().plot()
-        # plt.show(block=True)  # Plot the average data after baseline correction 展示基线校正后的数据
+        events = [[onsetsamp, 0, 1]]
+        event_id = {'Event1': 1}
+
+        # epochs = mne.make_fixed_length_epochs(crop_data, duration=int(crop_data.tmax),preload=True)#make one epoch 做成1个epoch
+        epochs = mne.Epochs(rereferenced_data, events, event_id=event_id, tmin=tmin, tmax=tmax, baseline=baseline, preload=True)
+        # epochs.apply_baseline(baseline)
 
         # Z-score standardization z-score标准化
         epoch_data = epochs.get_data()
@@ -117,66 +192,16 @@ for i in range(1,subject_num+1):
         # converting epoch data to raw data 将epoch 转为 raw
         info = epochs.info
         new_raw = mne.io.RawArray(epochs_data_standardized, info)
-        new_raw.plot(scalings=1,n_channels=129,duration=10)
-        plt.tight_layout()
-        plt.show(block=True)
-
-        # in case there are less than 10 seconds shift before onset 避免有的run中onset前不足10秒
-        drop_data = new_raw.copy().crop(tmin=max(onset + onset_shift, 0), tmax=offset)
-        onset_annotation = 10  # marking the onset to the processed data 为处理后的文件记录新的onset位置
-        if max(onset + onset_shift, 0) == 0:
-            onset_annotation = onset
-        # drop bad channels based on the record 根据记录文件去除坏道
-        if sheet1.cell(row=bad_channel_start + i, column=2).value != None:
-            drop_chan = sheet1.cell(row=bad_channel_start + i, column=2).value.split(",")
-            if dataset == "ummc":
-                drop_chan.append('EVENT')
-            drop_data = drop_data.drop_channels(drop_chan)
-            drop_data.plot(scalings=1, n_channels=60)
-            plt.tight_layout()
-            plt.show(block=True)  # show data after cropping and dropping channels 展示截取后的数据
-            spectrum_drop = drop_data.compute_psd()
-            spectrum_drop.plot(average=True)
-            plt.tight_layout()
-            plt.show(block=True)
-
-
-
-
-        hl_data = drop_data.copy().filter(h_freq=high_freq, l_freq=low_freq)  # high-low pass filter 高-低通滤波
-        hl_data.plot(scalings=1, n_channels=129)
-        plt.tight_layout()
-        plt.show(block=True)  # show data after high-low pass filter 展示高-低通滤波后的数据
-        spectrum_hl = hl_data.compute_psd()
-        spectrum_hl.plot(average=True)
-        plt.tight_layout()
-        plt.show(block=True)
-
-
-        notch_data = hl_data.copy().notch_filter(freqs=PLF)#removing powerline noise 去除工频噪音
-        notch_data.plot(scalings=1,n_channels=129)
-        plt.tight_layout()
-        plt.show(block=True)#show data after removing powerline noise 展示去除工频后的数据
-        spectrum_pl = notch_data.compute_psd()
-        spectrum_pl.plot(average=True)
+        new_raw.plot(scalings=1,n_channels=129)
         plt.tight_layout()
         plt.show(block=True)
 
 
         #record the new parameters 记录处理后数据的参数
-        ch_num = notch_data.info['nchan']
-        sample_num = notch_data.times.shape[0]
-        duration = round(notch_data.tmax)
+        ch_num = new_raw.info['nchan']
+        sample_num = new_raw.times.shape[0]
+        duration = round(new_raw.tmax)
 
-        #rereferencing with common average reference  通过全局平均参考进行重参考
-        rereferenced_data, ref_data = mne.set_eeg_reference(notch_data,copy=True)
-        rereferenced_data.plot(scalings=1,n_channels=60)
-        plt.tight_layout()
-        plt.show(block=True)#show the data after rereferencing 展示重参考后的数据
-        spectrum_ref = rereferenced_data.compute_psd()
-        spectrum_ref.plot(average=True)
-        plt.tight_layout()
-        plt.show(block=True)
 
         #save .fif and .mat file 保存文件为fif文件和mat文件
         save_folder_path = saveroot+"/"+dataset+"/sub{}".format(i)
