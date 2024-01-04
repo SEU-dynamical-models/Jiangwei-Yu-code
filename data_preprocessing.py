@@ -16,7 +16,7 @@ from scipy.stats import zscore
 
 
 #reading yaml file, get parameters 读取yaml文件，获取参数
-with open("D:\qq文件\交接代码\server_py\dataprocess.yaml", 'r',encoding='UTF-8') as f:
+with open("/home/yujiangwei/server_py/dataprocess.yaml", 'r',encoding='UTF-8') as f:
     data = yaml.load(f, Loader=yaml.FullLoader)
 
 dataset = data.get('dataset')#data sources 数据来源
@@ -27,7 +27,6 @@ onset_shift = data.get('onsetshift')#cropping onset shift time 裁剪onset时的
 subject_num = data.get('sub_num')#subject number 数据subject数量
 maxrun = data.get('maxrun')#max run numbers for subjects 每个subject最大试验次数
 data_root = data.get('root')#data root path 数据根目录
-bad_channel_start = data.get('bad_start')#certain data source's starting num of the bad channels file 某种数据坏道文件中记录的起点
 saveroot = data.get('save_root')#processed data saving path 处理后数据的保存路径
 baseline_shift_start = data.get('baseline_shift_start')#baseline correction start 基线校正参考开始时间
 baseline_shift_end = data.get('baseline_shift_end')#baseline correction end 基线校正参考结束时间
@@ -144,22 +143,21 @@ for i in range(1,subject_num+1):
         bad_run_index = "_run-0{}".format(j)
         bad_index = bad_sub_index + "{}".format(i) + bad_run_index
         bad_channel_string = bad_df.loc[bad_df['dataset_id']==bad_index,'bad_contacts'].iloc[0]
-        if bad_channel_string != None:
-            drop_chan = bad_channel_string.split(",")
-            if dataset == "ummc" or dataset == "umf":
-                drop_chan.append('EVENT')
-            drop_ch_data.info['bads'] += drop_chan
-            drop_ch_data.plot(scalings=4e-4, n_channels=200, duration=30)
-            plt.tight_layout()
-            plt.show(block=True)  # show data after cropping and dropping channels 展示截取后的数据
-            drop_ch_data = drop_ch_data.drop_channels(drop_chan)
-            # drop_ch_data.plot(scalings=4e-4,n_channels=160)
-            # plt.tight_layout()
-            # plt.show(block=True)  # show data after cropping and dropping channels 展示截取后的数据
-            # spectrum_drop = drop_ch_data.compute_psd()
-            # spectrum_drop.plot()
-            # plt.tight_layout()
-            # plt.show(block=True)
+        drop_chan = bad_channel_string.split(",")
+        if dataset == "ummc" or dataset == "umf":
+            drop_chan.append('EVENT')
+        drop_ch_data.info['bads'] += drop_chan
+        # drop_ch_data.plot(scalings=4e-4, n_channels=60, duration=10)
+        # plt.tight_layout()
+        # plt.show(block=True)  # show data after cropping and dropping channels 展示截取后的数据
+        drop_ch_data = drop_ch_data.drop_channels(drop_chan)
+        # drop_ch_data.plot(scalings=4e-4,n_channels=160)
+        # plt.tight_layout()
+        # plt.show(block=True)  # show data after cropping and dropping channels 展示截取后的数据
+        # spectrum_drop = drop_ch_data.compute_psd()
+        # spectrum_drop.plot()
+        # plt.tight_layout()
+        # plt.show(block=True)
 
         # rereferencing with common average reference  通过全局平均参考进行重参考
         rereferenced_data, ref_data = mne.set_eeg_reference(drop_ch_data, copy=True)
@@ -216,18 +214,18 @@ for i in range(1,subject_num+1):
 
 
         #save .fif and .mat file 保存文件为fif文件和mat文件
-        # save_folder_path = saveroot+"/"+dataset+"/sub{}".format(i)
-        # if not os.path.exists(save_folder_path):
-        #     os.mkdir(save_folder_path)
-        # save_path_fif = save_folder_path + read_folder_path+"{}_".format(i)+"run0{}_data.fif".format(j)
-        # save_path_mat = save_folder_path + read_folder_path+"{}_".format(i)+"run0{}_data.mat".format(j)
-        # rereferenced_data.save(save_path_fif,overwrite=True)
-        # hdf.savemat(file_name = save_path_mat,
-        #             mdict= {
-        #                 "data":rereferenced_data.get_data(),#data array after processing 处理后的数据
-        #                 "onset_annotation":onset_annotation,#onset annotation onset标注
-        #                 'SamplingFrequency': SF,
-        #                 'channel_num': ch_num,
-        #                 'sample_num': sample_num,#采样个数
-        #                 'duration': duration
-        #             })
+        save_folder_path = saveroot+"/"+dataset+"/sub{}".format(i)
+        if not os.path.exists(save_folder_path):
+            os.mkdir(save_folder_path)
+        save_path_fif = save_folder_path + read_folder_path+"{}_".format(i)+"run0{}_data.fif".format(j)
+        save_path_mat = save_folder_path + read_folder_path+"{}_".format(i)+"run0{}_data.mat".format(j)
+        rereferenced_data.save(save_path_fif,overwrite=True)
+        hdf.savemat(file_name = save_path_mat,
+                    mdict= {
+                        "data":rereferenced_data.get_data(),#data array after processing 处理后的数据
+                        "onset_annotation":onset_annotation,#onset annotation onset标注
+                        'SamplingFrequency': SF,
+                        'channel_num': ch_num,
+                        'sample_num': sample_num,#采样个数
+                        'duration': duration
+                    })

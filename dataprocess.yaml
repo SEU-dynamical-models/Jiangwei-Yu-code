@@ -1,0 +1,11 @@
+Badchannel_path: /home/yujiangwei/server_py/bad_channels_done_added_allrun.xlsx
+high_freq: 100
+low_freq: 0.1
+onsetshift: -10
+dataset: ummc
+sub_num: 9
+maxrun: 6
+root: /home/yujiangwei/open_data
+save_root: /home/yujiangwei/processed_open_data
+baseline_shift_start: -5
+baseline_shift_end: -1
