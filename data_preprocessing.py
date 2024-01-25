@@ -9,14 +9,13 @@ import matplotlib.pyplot as plt
 import json
 import os
 import yaml
-from openpyxl import load_workbook
-import hdf5storage as hdf
 import pandas as pd
 from scipy.stats import zscore
+import hdf5storage as hdf
 
 
 #reading yaml file, get parameters 读取yaml文件，获取参数
-with open("/home/yujiangwei/server_py/dataprocess.yaml", 'r',encoding='UTF-8') as f:
+with open("D:\qq文件\交接代码\server_py\dataprocess.yaml", 'r',encoding='UTF-8') as f:
     data = yaml.load(f, Loader=yaml.FullLoader)
 
 dataset = data.get('dataset')#data sources 数据来源
@@ -147,11 +146,11 @@ for i in range(1,subject_num+1):
         if dataset == "ummc" or dataset == "umf":
             drop_chan.append('EVENT')
         drop_ch_data.info['bads'] += drop_chan
-        # drop_ch_data.plot(scalings=4e-4, n_channels=60, duration=10)
+        # drop_ch_data.plot(scalings=4e-4, n_channels=200, duration=10)
         # plt.tight_layout()
         # plt.show(block=True)  # show data after cropping and dropping channels 展示截取后的数据
         drop_ch_data = drop_ch_data.drop_channels(drop_chan)
-        # drop_ch_data.plot(scalings=4e-4,n_channels=160)
+        # drop_ch_data.plot(scalings=4e-4, n_channels=200, duration=10)
         # plt.tight_layout()
         # plt.show(block=True)  # show data after cropping and dropping channels 展示截取后的数据
         # spectrum_drop = drop_ch_data.compute_psd()
@@ -208,9 +207,17 @@ for i in range(1,subject_num+1):
 
 
         #record the new parameters 记录处理后数据的参数
-        ch_num = new_raw.info['nchan']
-        sample_num = new_raw.times.shape[0]
-        duration = round(new_raw.times.max())
+        # ch_num = new_raw.info['nchan']
+        # duration = round(new_raw.times.max())
+        ch_list = new_raw.ch_names
+        time_array = new_raw.times
+        new_raw_data = new_raw.get_data()
+        step_size = SF
+        trial_data = [new_raw_data[:, i:i+step_size] for i in range(0, new_raw_data.shape[1], step_size)]
+        trial_data = trial_data[:-1]
+        time_array = [time_array[i:i+step_size] for i in range(0, time_array.shape[0], step_size)]
+        time_array = time_array[:-1]
+        time_array[:] = np.full_like(time_array, time_array[0])
 
 
         #save .fif and .mat file 保存文件为fif文件和mat文件
@@ -219,13 +226,15 @@ for i in range(1,subject_num+1):
             os.mkdir(save_folder_path)
         save_path_fif = save_folder_path + read_folder_path+"{}_".format(i)+"run0{}_data.fif".format(j)
         save_path_mat = save_folder_path + read_folder_path+"{}_".format(i)+"run0{}_data.mat".format(j)
-        rereferenced_data.save(save_path_fif,overwrite=True)
+        # new_raw.save(save_path_fif,overwrite=True)
+        mat_data = {
+            "trial": trial_data,  # data array after processing 处理后的数据
+            "onset_annotation": onset_annotation,  # onset annotation onset标注
+            'fsample': float(SF),
+            'label': ch_list,
+            'time': time_array
+        }
         hdf.savemat(file_name = save_path_mat,
                     mdict= {
-                        "data":rereferenced_data.get_data(),#data array after processing 处理后的数据
-                        "onset_annotation":onset_annotation,#onset annotation onset标注
-                        'SamplingFrequency': SF,
-                        'channel_num': ch_num,
-                        'sample_num': sample_num,#采样个数
-                        'duration': duration
+                        'data' : mat_data
                     })
