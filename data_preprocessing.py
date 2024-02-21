@@ -2,6 +2,7 @@
 #作者：余江伟
 #时间：2023/11/16; 2023/11/30:添加了基线校正和z-score标准化
 #联系方式：15300593720
+#2024-2-21 update: added new function to convert raw data into BIDS dataset
 
 import mne
 import numpy as np
