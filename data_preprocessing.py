@@ -241,6 +241,7 @@ for i in range(1,subject_num+1):
                         'data' : new_raw_data
                     })
         #输出BIDS数据
-        bids_path = BIDSPath(subject='umf001', session='01', run='01',
-                             datatype='eeg', root=save_path_BIDS, task='mytask')
-        write_raw_bids(new_raw, bids_path=bids_path, allow_preload=True, format="EEGLAB", overwrite=True)
+        sub_name = bad_sub_index+"{}".format(i)
+        bids_path = BIDSPath(subject=sub_name, session='presurgery', run="0{}".format(j),
+                             datatype='eeg', root=save_path_BIDS, task='GC')
+        write_raw_bids(new_raw, bids_path=bids_path, allow_preload=True, format="BrainVision", overwrite=True)
