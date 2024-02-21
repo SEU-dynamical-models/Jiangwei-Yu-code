@@ -12,10 +12,10 @@ import yaml
 import pandas as pd
 from scipy.stats import zscore
 import hdf5storage as hdf
-
+from mne_bids import BIDSPath, write_raw_bids
 
 #reading yaml file, get parameters 读取yaml文件，获取参数
-with open("D:\qq文件\交接代码\server_py\dataprocess.yaml", 'r',encoding='UTF-8') as f:
+with open("/home/yujiangwei/server_py/dataprocess.yaml", 'r',encoding='UTF-8') as f:
     data = yaml.load(f, Loader=yaml.FullLoader)
 
 dataset = data.get('dataset')#data sources 数据来源
@@ -214,10 +214,10 @@ for i in range(1,subject_num+1):
         new_raw_data = new_raw.get_data()
         step_size = SF
         trial_data = [new_raw_data[:, i:i+step_size] for i in range(0, new_raw_data.shape[1], step_size)]
-        trial_data = trial_data[:-1]
+        # trial_data = trial_data[:-1]
         time_array = [time_array[i:i+step_size] for i in range(0, time_array.shape[0], step_size)]
-        time_array = time_array[:-1]
-        time_array[:] = np.full_like(time_array, time_array[0])
+        # time_array = time_array[:-1]
+        # time_array[:] = np.full_like(time_array, time_array[0])
 
 
         #save .fif and .mat file 保存文件为fif文件和mat文件
@@ -226,15 +226,21 @@ for i in range(1,subject_num+1):
             os.mkdir(save_folder_path)
         save_path_fif = save_folder_path + read_folder_path+"{}_".format(i)+"run0{}_data.fif".format(j)
         save_path_mat = save_folder_path + read_folder_path+"{}_".format(i)+"run0{}_data.mat".format(j)
-        # new_raw.save(save_path_fif,overwrite=True)
-        mat_data = {
-            "trial": trial_data,  # data array after processing 处理后的数据
-            "onset_annotation": onset_annotation,  # onset annotation onset标注
-            'fsample': float(SF),
-            'label': ch_list,
-            'time': time_array
-        }
+        save_path_BIDS = save_folder_path + "/BIDS_dataset"
+        new_raw.save(save_path_fif,overwrite=True)
+        #生成struct
+        # mat_data = {
+        #     "trial": trial_data,  # data array after processing 处理后的数据
+        #     "onset_annotation": onset_annotation,  # onset annotation onset标注
+        #     'fsample': float(SF),
+        #     'label': ch_list,
+        #     'time': time_array
+        # }
         hdf.savemat(file_name = save_path_mat,
                     mdict= {
-                        'data' : mat_data
+                        'data' : new_raw_data
                     })
+        #输出BIDS数据
+        bids_path = BIDSPath(subject='umf001', session='01', run='01',
+                             datatype='eeg', root=save_path_BIDS, task='mytask')
+        write_raw_bids(new_raw, bids_path=bids_path, allow_preload=True, format="EEGLAB", overwrite=True)
