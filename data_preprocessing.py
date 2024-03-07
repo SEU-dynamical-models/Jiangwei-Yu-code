@@ -187,6 +187,10 @@ for i in range(1,subject_num+1):
         #make one epoch 做成1个epoch
         epochs = mne.Epochs(rereferenced_data, events, event_id=event_id, tmin=tmin, tmax=tmax, baseline=baseline, preload=True)
 
+        #降采样到250Hz
+        
+
+
         # Z-score standardization z-score标准化
         epoch_data = epochs.get_data()
         converting_data = np.squeeze(epoch_data)  # Reshape to (n_channels * n_times)
@@ -230,19 +234,19 @@ for i in range(1,subject_num+1):
         save_path_BIDS = save_folder_path + "/BIDS_dataset"
         new_raw.save(save_path_fif,overwrite=True)
         #生成struct
-        # mat_data = {
-        #     "trial": trial_data,  # data array after processing 处理后的数据
-        #     "onset_annotation": onset_annotation,  # onset annotation onset标注
-        #     'fsample': float(SF),
-        #     'label': ch_list,
-        #     'time': time_array
-        # }
+        mat_data = {
+            "trial": new_raw_data,  #trial_data,  # data array after processing 处理后的数据
+            "onset_annotation": onset_annotation,  # onset annotation onset标注
+            'fsample': float(SF),
+            'label': ch_list
+            #'time': time_array
+        }
         hdf.savemat(file_name = save_path_mat,
-                    mdict= {
-                        'data' : new_raw_data
+                    mdict = {
+                        'data' : mat_data  #new_raw_data 
                     })
-        #输出BIDS数据
-        sub_name = bad_sub_index+"{}".format(i)
-        bids_path = BIDSPath(subject=sub_name, session='presurgery', run="0{}".format(j),
-                             datatype='eeg', root=save_path_BIDS, task='GC')
-        write_raw_bids(new_raw, bids_path=bids_path, allow_preload=True, format="BrainVision", overwrite=True)
+        # #输出BIDS数据
+        # sub_name = bad_sub_index+"{}".format(i)
+        # bids_path = BIDSPath(subject=sub_name, session='presurgery', run="0{}".format(j),
+        #                      datatype='eeg', root=save_path_BIDS, task='GC')
+        # write_raw_bids(new_raw, bids_path=bids_path, allow_preload=True, format="BrainVision", overwrite=True)
