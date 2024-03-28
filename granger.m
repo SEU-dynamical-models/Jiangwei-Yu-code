@@ -2,10 +2,9 @@
 
 addpath(genpath('D:\qq文件\交接代码\brainstorm\brainstorm3/'));%通过brainstorm计算格兰杰因果
 addpath('D:\qq文件\交接代码\bids-matlab-main\bids-matlab-main');%读取BIDS数据工具包
-root_path = "D:\qq文件\交接代码\数据集\data\processed\jh\";%"/home/yujiangwei/processed_open_data/jh";
+root_path = "D:\qq文件\交接代码\数据集\data\processed\pt\";%"/home/yujiangwei/processed_open_data/jh";
 sub_files = dir(fullfile(root_path, 'sub*'));
 %granger参数
-%order = 7;
 inputs =[];
 inputs.nTrials = 1;
 inputs.standardize = 1;
@@ -27,7 +26,7 @@ for j = 1:numel(sub_files)
         event = ft_read_event(vmrk_file{k});%读取vmrk的event数据，得到onset
         BIDS_raw = ft_preprocessing(cfg);%读取eeg数据，包括trial，通道名，采样率等信息
         %获取最佳阶数
-        AIC_data = load('D:\qq文件\交接代码\数据集\data\processed\jh_AIC.mat');
+        AIC_data = load('D:\qq文件\交接代码\数据集\data\processed\pt_AIC.mat');
         best_order = AIC_data.point_set{j}{k};%获取第j个受试者的第k次run的最佳阶
         %数据参数
         Fsample = BIDS_raw.fsample;%采样率
@@ -56,7 +55,7 @@ for j = 1:numel(sub_files)
                 granger_result.connectivity{i} = transpose(connectivity);%转置矩阵，结果为纵轴为sources，横轴为sinks
             end
         end
-        granger_save_path = "jh_sub"+ num2str(j) + "_run" + num2str(k) + "_granger.mat";
+        granger_save_path = "pt_"+ filename + "_run" + num2str(k) + "_granger.mat";
         save(granger_save_path, 'granger_result');%保存结果
     end
 end

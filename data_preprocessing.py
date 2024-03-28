@@ -1,4 +1,4 @@
-#功能：数据预处理，消除工频，去除坏道，全局平均重参考，数据保存为.mat和.fif格式
+#功能：数据预处理，消除工频，去除坏道，全局平均重参考，数据保存为BIDS数据
 #作者：余江伟
 #时间：2023/11/16; 2023/11/30:添加了基线校正和z-score标准化
 #联系方式：15300593720
@@ -32,8 +32,6 @@ baseline_shift_start = data.get('baseline_shift_start')#baseline correction star
 baseline_shift_end = data.get('baseline_shift_end')#baseline correction end 基线校正参考结束时间
 
 #open bad channels file打开坏道文件
-# book = load_workbook(bad_channels_path)
-# sheet1 = book.get_sheet_by_name('Sheet1')
 bad_df = pd.read_excel(bad_channels_path)
 
 #choose 1 of 4 kind of data based on yaml parameter 根据参数选择某种数据来源
@@ -52,7 +50,7 @@ elif dataset=="umf":
     read_folder_path = "/sub-umf00"
     bad_sub_index = "umf00"
 
-#loop for all subjects and runs 遍历该数据的所有受试者的所有实验
+#loop for all subjects and runs 遍历该数据的所有受试者的所有实验（可用mneBIDS优化）
 for i in range(1,subject_num+1):
     if dataset=="pt" and i==1:
         read_folder_path = read_folder_path + "0"
@@ -76,7 +74,7 @@ for i in range(1,subject_num+1):
         with open(json_data,'r',encoding='UTF-8') as f:
             json_info = json.load(f)
         PLF = json_info["PowerLineFrequency"]
-        SF = round(json_info["SamplingFrequency"])
+        SF = json_info["SamplingFrequency"]
         #set default onset and offset 设置onset和offset的默认值
         onset = 10
         offset = int(raw.times.max())
@@ -142,11 +140,11 @@ for i in range(1,subject_num+1):
         drop_ch_data = notch_data.copy()
         bad_run_index = "_run-0{}".format(j)
         bad_index = bad_sub_index + "{}".format(i) + bad_run_index
-        bad_channel_string = bad_df.loc[bad_df['dataset_id']==bad_index,'bad_contacts'].iloc[0]
+        bad_channel_string = bad_df.loc[bad_df['dataset_id']==bad_index,'bad_contacts'].iloc[0]#通过id获取坏道字符串
         drop_chan = bad_channel_string.split(",")
         if dataset == "ummc" or dataset == "umf":
             drop_chan.append('EVENT')
-        drop_ch_data.info['bads'] += drop_chan
+        drop_ch_data.info['bads'] += drop_chan#在info中添加坏道可以在画图时将坏道变色
         # drop_ch_data.plot(scalings=4e-4, n_channels=200, duration=10)
         # plt.tight_layout()
         # plt.show(block=True)  # show data after cropping and dropping channels 展示截取后的数据
@@ -171,9 +169,9 @@ for i in range(1,subject_num+1):
 
 
         # baseline correction 基线校正
-        baseline_start = baseline_shift_start
-        baseline_end = baseline_shift_end
-        tmin, tmax = onset_shift, offset - onset
+        baseline_start = baseline_shift_start #基线的开始时间
+        baseline_end = baseline_shift_end #基线的结束时间
+        tmin, tmax = onset_shift, offset - onset #基线校正的时间区间
         onset_annotation = -onset_shift  # marking the onset to the processed data 为处理后的文件记录新的onset位置
         if max(onset + onset_shift, 0) == 0:# in case onset time is less than onset_shift 防止onset时间小于onset_shift时间
             onset_annotation = onset
@@ -184,11 +182,11 @@ for i in range(1,subject_num+1):
         events = [[onsetsamp, 0, 1]]
         event_id = {'Event1': 1}
 
-        #make one epoch 做成1个epoch
+        #make one epoch 做成1个epoch（此函数中tmin，tmax，baseline都是相对于event而言，每个event发生时间为每个epoch的0时刻）
         epochs = mne.Epochs(rereferenced_data, events, event_id=event_id, tmin=tmin, tmax=tmax, baseline=baseline, preload=True)
 
         #降采样到250Hz
-        
+        epochs.resample(sfreq=250)
 
 
         # Z-score standardization z-score标准化
@@ -210,43 +208,12 @@ for i in range(1,subject_num+1):
         # plt.tight_layout()
         # plt.show(block=True)
 
-
-        #record the new parameters 记录处理后数据的参数
-        # ch_num = new_raw.info['nchan']
-        # duration = round(new_raw.times.max())
-        ch_list = new_raw.ch_names
-        time_array = new_raw.times
-        new_raw_data = new_raw.get_data()
-        step_size = SF
-        trial_data = [new_raw_data[:, i:i+step_size] for i in range(0, new_raw_data.shape[1], step_size)]
-        # trial_data = trial_data[:-1]
-        time_array = [time_array[i:i+step_size] for i in range(0, time_array.shape[0], step_size)]
-        # time_array = time_array[:-1]
-        # time_array[:] = np.full_like(time_array, time_array[0])
-
-
-        #save .fif and .mat file 保存文件为fif文件和mat文件
-        save_folder_path = saveroot+"/"+dataset+"/sub{}".format(i)
+        #输出BIDS数据
+        save_folder_path = saveroot + "/" + dataset + "/sub{}".format(i)
         if not os.path.exists(save_folder_path):
             os.mkdir(save_folder_path)
-        save_path_fif = save_folder_path + read_folder_path+"{}_".format(i)+"run0{}_data.fif".format(j)
-        save_path_mat = save_folder_path + read_folder_path+"{}_".format(i)+"run0{}_data.mat".format(j)
         save_path_BIDS = save_folder_path + "/BIDS_dataset"
-        new_raw.save(save_path_fif,overwrite=True)
-        #生成struct
-        mat_data = {
-            "trial": new_raw_data,  #trial_data,  # data array after processing 处理后的数据
-            "onset_annotation": onset_annotation,  # onset annotation onset标注
-            'fsample': float(SF),
-            'label': ch_list
-            #'time': time_array
-        }
-        hdf.savemat(file_name = save_path_mat,
-                    mdict = {
-                        'data' : mat_data  #new_raw_data 
-                    })
-        # #输出BIDS数据
-        # sub_name = bad_sub_index+"{}".format(i)
-        # bids_path = BIDSPath(subject=sub_name, session='presurgery', run="0{}".format(j),
-        #                      datatype='eeg', root=save_path_BIDS, task='GC')
-        # write_raw_bids(new_raw, bids_path=bids_path, allow_preload=True, format="BrainVision", overwrite=True)
+        sub_name = bad_sub_index+"{}".format(i)
+        bids_path = BIDSPath(subject=sub_name, session='presurgery', run="0{}".format(j),
+                             datatype='eeg', root=save_path_BIDS, task='GC')
+        write_raw_bids(new_raw, bids_path=bids_path, allow_preload=True, format="BrainVision", overwrite=True)
