@@ -1,0 +1,45 @@
+base_data_folder_path  : D:/qq文件/交接代码/SEU_cohort/SEU_cohort/          # this is on CMR workstation
+preprocessed_data_path : D:/qq文件/交接代码/SEU_cohort/SEU_cohort//MEG_ICA
+freesurfer_subjects_dir: D:/qq文件/交接代码/SEU_cohort/SEU_cohort//MRI_FS   # fs subjects dir
+ictal_events_file_path : D:/qq文件/交接代码/SEU_cohort/SEU_cohort//Events
+post_analysis_data_path: D:/qq文件/交接代码/SEU_cohort/SEU_cohort//PostAnalysis/Ictal_Source_Recon
+ViEEG_config_data_path : D:/qq文件/交接代码/SEU_cohort/SEU_cohort//ViEEG_config
+
+patient_list: # patient list
+- MEG1155
+- MEG1258_1
+- MEG1430
+- MEG1544
+- MEG1624
+- MEG1725
+- MEG1734
+- MEG1818
+- MEG1889
+
+ViEEG_config_fname_list:
+  MEG1155    : MEG1155_vieeg_implantation.res
+  MEG1258_1  : MEG1258_1_vieeg_implantation.res
+  MEG1430    : MEG1430_vieeg_implantation.res
+  MEG1544    : MEG1544_vieeg_implantation.res
+  MEG1624    : MEG1624_vieeg_implantation.res
+  MEG1725    : MEG1725_vieeg_implantation.res
+  MEG1734    : MEG1734_vieeg_implantation.res
+  MEG1818    : MEG1818_vieeg_implantation.res
+  MEG1889    : MEG1889_vieeg_implantation.res
+
+MEG_sfreq           : 1000 # default MEG sample frequency
+beamformer_method   : lcmv # beamformer technique
+beamformer_pick_ori : max-power
+regularization      : 0.01
+lcmv_rank           : null
+cov_method          : null
+cov_rank            : full # info # full
+beamformer_inversion: single # matrix
+noise_cov_tmax      : -20
+noise_cov_tmin      : null
+data_cov_tmax       : null
+data_cov_tmin       : null
+pre_ictal_time      : -30
+post_ictal_time     : 0
+BEM_method          : bst #ft #curry
+bem_spacing         : null
