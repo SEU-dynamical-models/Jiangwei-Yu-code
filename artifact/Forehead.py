@@ -13,13 +13,17 @@ from PyQt5.QtWidgets import QDialog, QApplication, QLabel, QSpacerItem, QSizePol
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import QTimer, QTime, Qt
 from PyQt5.QtMultimedia import QSound
+import api
 
+'''
+上额测试类，弹出上额测试窗口，提示受试者保持皱眉，每次持续10s，共2次，其间休息20s
+'''
 
 class Forehead_test_Window(QDialog):
     def __init__(self):
         super(Forehead_test_Window, self).__init__()
         self.setWindowTitle("上额伪迹采集")
-        self.resize(2600,1600)
+        self.resize(580,580)
 
         # 创建显示倒计时的 QLabel
         layout = QtWidgets.QVBoxLayout(self)  # 创建一个 QVBoxLayout 布局管理器
@@ -36,17 +40,18 @@ class Forehead_test_Window(QDialog):
         self.squeeze_timer.timeout.connect(self.squeeze_hold)
         self.rest_timer.timeout.connect(self.rest_repeat)
 
-    def reminder(self):
-        self.rest_num = 1
+    def reminder(self):#此函数为开启上额测试的初始函数
+        self.rest_num = 1 #休息间隔为1次，即皱眉，休息，皱眉
         self.squeeze()
 
-    def squeeze(self):
-        self.remaintime = 10
+    def squeeze(self): #调用此函数开始皱眉测试
+        self.remaintime = 10 #皱眉保持时间
         QSound.play("皱眉.wav")
         self.play_alarm()
+        api.mark(14)
         self.squeeze_timer.start(1000)
 
-    def rest(self):
+    def rest(self): #调用此函数开始休息
         self.rest_remaintime = 20
         QSound.play("休息.wav")
         self.play_alarm()
@@ -62,7 +67,8 @@ class Forehead_test_Window(QDialog):
             self.remaintime -= 1
         else:
             self.squeeze_timer.stop()
-            if self.rest_num == 0:
+            api.mark(0)
+            if self.rest_num == 0:#根据已休息次数判断接下来休息还是结束整轮测试
                 self.play_alarm()
                 QSound.play("结束.wav")
                 self.timer_label.setText("上额测试结束！")
@@ -79,7 +85,7 @@ class Forehead_test_Window(QDialog):
             self.rest_remaintime -= 1
         else:
             self.rest_timer.stop()
-            if self.rest_num != 0:
+            if self.rest_num != 0: #根据已休息次数判断是否继续皱眉测试
                 self.squeeze()
                 self.rest_num -= 1
 

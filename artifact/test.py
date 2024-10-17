@@ -1,6 +1,11 @@
+#自动伪迹采集系统，提示受试者做出相应动作并自动打标，链接脑电设备api
+#test.py为qt初始化程序，运行test.py开启自动伪迹采集系统
+#此采集系统由主窗口，基线测试，眼动测试，肌动测试，舌动测试，下颚测试，上额测试组成
+#作者：余江伟
+#更新时间：10，17，2024
+
 import sys
 import main
-
 from PyQt5.QtWidgets import QApplication,QMainWindow
 
 if __name__ == '__main__':

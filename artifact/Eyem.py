@@ -13,13 +13,22 @@ from PyQt5.QtWidgets import QDialog, QApplication, QLabel, QSpacerItem, QSizePol
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import QTimer, QTime, Qt
 from PyQt5.QtMultimedia import QSound
+import api
 
+'''
+眼动测试类，弹出眼动测试窗口，眼动测试包括上下眼动，左右眼动以及频率为1s每次的眨眼
+上下眼动各5次
+休息30s
+左右眼动各5次
+休息30s
+眨眼1分钟
+'''
 
 class Eyem_test_Window(QDialog):
     def __init__(self):
         super(Eyem_test_Window, self).__init__()
         self.setWindowTitle("眼动伪迹采集")
-        self.resize(2600,1600)
+        self.resize(1920,980)
 
         # 创建显示倒计时的 QLabel
         layout = QtWidgets.QVBoxLayout(self)  # 创建一个 QVBoxLayout 布局管理器
@@ -31,29 +40,30 @@ class Eyem_test_Window(QDialog):
         layout.addWidget(self.timer_label, alignment=Qt.AlignCenter)
 
         # 创建定时器
-        self.dot_timer = QTimer(self)
-        self.rest_timer = QTimer(self)
-        self.dot_timer.timeout.connect(self.show_dot)
-        self.rest_timer.timeout.connect(self.rest_update)
+        self.dot_timer = QTimer(self)#红点出现计时，每1s更新一次
+        self.rest_timer = QTimer(self)#休息计时
+        self.dot_timer.timeout.connect(self.show_dot)#每次计时更新调用show_dot
+        self.rest_timer.timeout.connect(self.rest_update)#每次计时更新调用#rest_update
         self.dot_visible = True  # 红点是否可见
         self.dot_position = 0  # 控制红点的位置（0 为顶部/左部，1 为底部/右部）
         self.is_dot_centered = False  # 标志位，是否已经将红点放置到窗口中心
 
-    def rest(self):
+
+    def rest(self):#调用此函数开始休息计时
         self.is_dot_centered = False
-        self.update()
-        self.remaintime = 5
+        self.update()#更新窗口，刷新界面红点位置
+        self.remaintime = 30
         self.rest_timer.start(1000)
 
-    def eyeblink(self):
-        self.round = 2
+    def eyeblink(self):#调用此函数执行眨眼测试
+        self.round = 2 #记录此为哪类测试
         self.is_dot_centered = False
         self.update()
-        self.remaintime = 5
+        self.remaintime = 60
+        api.mark(4) #打标
         self.rest_timer.start(1000)
 
-    def rest_update(self):
-        # 更新显示的时间
+    def rest_update(self):#此函数更新休息时间倒计时和正常眨眼倒计时
 
         minutes = self.remaintime // 60
         seconds = self.remaintime % 60
@@ -66,31 +76,36 @@ class Eyem_test_Window(QDialog):
         if self.remaintime <= 0:
             self.rest_timer.stop()
             if self.round == 0:
-                self.timer_label.hide()
+                self.timer_label.hide() #进行上下眼动测试前隐藏休息倒计时显示
                 self.next_round()
             elif self.round == 1:
                 self.play_alarm()
                 self.eyeblink()
             elif self.round == 2:
                 self.play_alarm()
+                api.mark(0)
                 QSound.play("结束.wav")
                 self.timer_label.setText("眼动测试结束!")
         else:
             self.remaintime -= 1  # 每次减少 1 秒
+            if self.round == 2:
+                self.play_alarm()
 
-    def start_dot_animation(self):
-        self.verorhor = 0
-        self.eyem_times = 10
-        self.round = 0
+    def start_dot_animation(self):#此函数为开启整轮眼动测试的初始函数，最先进行左右眼动
+        self.verorhor = 0 #区分左右眼动或上下眼动
+        self.eyem_times = 10 #左右总眼动次数，各5次
+        self.round = 0 #区分哪类测试
+        api.mark(2) #打标
         self.dot_timer.start(1000)  # 每 1 秒更新一次
 
-    def next_round(self):
+    def next_round(self):#调用此函数开启上下眼动测试
         self.verorhor = 1
         self.eyem_times = 10
         self.round = 1
+        api.mark(3)
         self.dot_timer.start(1000)  # 每 1 秒更新一次
 
-    def show_dot(self):
+    def show_dot(self): #调用此函数切换红点位置，实现动画
         if self.eyem_times != 0:
             self.dot_position = 1 - self.dot_position  # 切换位置
             # 触发提示音
@@ -101,6 +116,7 @@ class Eyem_test_Window(QDialog):
             self.eyem_times -= 1
         else:
             self.dot_timer.stop()
+            api.mark(0)
             self.timer_label.show()
             if self.round == 0 or 1:
                 self.rest()
@@ -110,14 +126,16 @@ class Eyem_test_Window(QDialog):
         QSound.play("alert.wav")  # 音频文件路径
 
 
-    def paintEvent(self, event):
+    def paintEvent(self, event): #定义每次出现的红点形状
         painter = QtGui.QPainter(self)
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
 
         # 绘制红点
         if self.dot_visible:
-            dot_radius = 50
+            dot_radius = 20
             dot_color = QtGui.QColor(255, 0, 0)  # 红色
+            line_color = QtGui.QColor(0, 0, 0)  # 黑色十字
+            painter.setPen(QtGui.QPen(line_color, 2))  # 设置线条颜色和宽度
             painter.setBrush(dot_color)
 
             # 确定红点的位置
@@ -126,21 +144,37 @@ class Eyem_test_Window(QDialog):
                 painter.drawEllipse(self.rect().center().x() - dot_radius / 2,
                                     self.rect().center().y() - dot_radius / 2,
                                     dot_radius, dot_radius)
-                # 设置标志位为 True，表示已经放置
+                dot_center_x = self.rect().center().x()
+                dot_center_y = self.rect().center().y()
                 self.is_dot_centered = True
             else:
                 if self.verorhor == 0:
                     if self.dot_position == 0:  # 顶部
                         painter.drawEllipse(self.rect().center().x() - dot_radius / 2, 0, dot_radius, dot_radius)
+                        dot_center_x = self.rect().center().x()
+                        dot_center_y = dot_radius / 2
                     else:  # 底部
                         painter.drawEllipse(self.rect().center().x() - dot_radius / 2, self.height() - dot_radius,
                                             dot_radius, dot_radius)
+                        dot_center_x = self.rect().center().x()
+                        dot_center_y = self.height() - dot_radius/2
                 elif self.verorhor == 1:
                     if self.dot_position == 0:  # 左侧
                         painter.drawEllipse(0, self.rect().center().y() - dot_radius / 2, dot_radius, dot_radius)
+                        dot_center_x = dot_radius / 2
+                        dot_center_y = self.rect().center().y()
                     else:  # 右侧
                         painter.drawEllipse(self.width() - dot_radius, self.rect().center().y() - dot_radius / 2,
                                             dot_radius, dot_radius)
+                        dot_center_x = self.width() - dot_radius/2
+                        dot_center_y = self.rect().center().y()
+
+            # 水平线
+            painter.drawLine(dot_center_x - dot_radius / 2, dot_center_y, dot_center_x + dot_radius / 2,
+                             dot_center_y)
+            # 垂直线
+            painter.drawLine(dot_center_x, dot_center_y - dot_radius / 2, dot_center_x,
+                             dot_center_y + dot_radius / 2)
 
 
 

@@ -13,13 +13,17 @@ from PyQt5.QtWidgets import QDialog, QApplication, QLabel, QSpacerItem, QSizePol
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import QTimer, QTime, Qt
 from PyQt5.QtMultimedia import QSound
+import api
 
+'''
+舌动测试类，弹出舌动测试窗口，舌动测试提示受试者跟读7个L音节打头的成语，促使舌头卷动，共3轮跟读
+'''
 
 class Tongue_test_Window(QDialog):
     def __init__(self):
         super(Tongue_test_Window, self).__init__()
         self.setWindowTitle("舌动伪迹采集")
-        self.resize(2600,1600)
+        self.resize(580,580)
 
         # 创建显示倒计时的 QLabel
         layout = QtWidgets.QVBoxLayout(self)  # 创建一个 QVBoxLayout 布局管理器
@@ -34,32 +38,38 @@ class Tongue_test_Window(QDialog):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.read)
 
-    def reminder_3times(self):
-        self.remind_count = 3
+    def reminder_3times(self):#此函数为开启舌动测试的初始函数
+        self.remind_count = 3 #设置跟读轮数
         self.reminder()
 
-    def reminder(self):
-        self.num_text = 8
+    def reminder(self): #调用此函数开始舌动测试
+        self.num_text = 8 #8个提示短语
         self.text_list = ["跟读以下短语：", "啰里啰唆", "来去匆匆", "了无牵挂", "流连忘返", "乐在其中", "来龙去脉", "黎明破晓"]
         self.sound_list = ["跟读.wav", "啰嗦.wav", "来去.wav", "牵挂.wav", "流连忘返.wav", "乐在.wav", "来龙.wav", "黎明.wav"]
-        self.list_count = 0
-        self.timer.start(4000)
+        self.list_count = 0 #记录已经提示的个数
+        self.timer.start(4000) #每次跟读间隔4s
 
     def read(self):
         if self.num_text != 0:
             self.timer_label.setText(self.text_list[self.list_count])
             QSound.play(self.sound_list[self.list_count])
             self.play_alarm()
+            if self.list_count > 1:
+                api.mark(0)
+            if self.list_count != 0:
+                api.mark(11)
             self.list_count += 1
             self.num_text -= 1
         else:
             self.play_alarm()
             self.timer.stop()
+            api.mark(0)
             if self.remind_count != 0:
                 self.reminder()
                 self.remind_count -= 1
             else:
                 self.play_alarm()
+                api.mark(0)
                 QSound.play("结束.wav")
                 self.timer_label.setText("舌动测试结束！")
 

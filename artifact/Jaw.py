@@ -13,13 +13,22 @@ from PyQt5.QtWidgets import QDialog, QApplication, QLabel, QSpacerItem, QSizePol
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import QTimer, QTime, Qt
 from PyQt5.QtMultimedia import QSound
+import api
 
+'''
+下颚测试类，弹出下颚测试窗口，下颚测试包括咬牙和吞咽口水
+咬牙5次
+休息20s
+咬牙5次
+休息20s
+吞咽口水5次
+'''
 
 class Jaw_test_Window(QDialog):
     def __init__(self):
         super(Jaw_test_Window, self).__init__()
         self.setWindowTitle("下颚伪迹采集")
-        self.resize(2600,1600)
+        self.resize(580,580)
 
         # 创建显示倒计时的 QLabel
         layout = QtWidgets.QVBoxLayout(self)  # 创建一个 QVBoxLayout 布局管理器
@@ -39,24 +48,25 @@ class Jaw_test_Window(QDialog):
         self.swallow_timer.timeout.connect(self.swallow_repeat)
 
 
-    def reminder(self):
-        self.rest_num = 2
+    def reminder(self):#此函数为开启下颚测试的初始函数，首先进行咬牙测试
+        self.rest_num = 2 #休息次数为2，即咬牙，休息，咬牙，休息，吞咽口水
         self.chew_reminder()
 
-    def chew_reminder(self):
-        self.chew_num = 5
+    def chew_reminder(self):#调用此函数执行咬牙测试
+        self.chew_num = 5 #咬牙次数
         self.timer_label.setText("咬牙")
         QSound.play("咬牙.wav")
-        self.chew_timer.start(2000)
+        api.mark(12)
+        self.chew_timer.start(2000) #每次咬牙持续2s
 
-    def swallow_reminder(self):
-        self.swallow_num = 5
+    def swallow_reminder(self): #调用此函数执行吞咽口水测试
+        self.swallow_num = 5 #吞咽口水次数
         self.timer_label.setText("吞咽口水")
         QSound.play("吞咽.wav")
-        self.swallow_timer.start(5000)
+        self.swallow_timer.start(5000) #每次吞咽口水持续5秒
 
-    def rest_reminder(self):
-        self.remaintime = 3
+    def rest_reminder(self):#调用此函数开始休息
+        self.remaintime = 20 #每次休息20s
         QSound.play("休息.wav")
         self.rest_timer.start(1000)
 
@@ -69,17 +79,13 @@ class Jaw_test_Window(QDialog):
         if self.remaintime != 0:
             self.remaintime -= 1
         else:
-            self.rest_timer.stop()
+            self.rest_timer.stop()#根据休息记录，决定接下来执行什么测试
             if self.rest_num == 2:
                 self.chew_reminder()
                 self.rest_num -= 1
             elif self.rest_num == 1:
                 self.swallow_reminder()
                 self.rest_num -= 1
-            elif self.rest_num == 0:
-                self.play_alarm()
-                QSound.play("结束.wav")
-                self.timer_label.setText("下颚测试结束！")
 
     def chew_repeat(self):
         if self.chew_num != 0:
@@ -87,14 +93,19 @@ class Jaw_test_Window(QDialog):
             self.chew_num -= 1
         else:
             self.chew_timer.stop()
+            api.mark(0)
             self.rest_reminder()
 
     def swallow_repeat(self):
         if self.swallow_num != 0:
             self.play_alarm()
+            if self.swallow_num != 5:
+                api.mark(0)
+            api.mark(13)
             self.swallow_num -= 1
         else:
-            self.swallow_timer.stop()
+            self.swallow_timer.stop() #吞咽结束后不再休息，直接结束整轮测试
+            api.mark(0)
             self.timer_label.setText("下颚测试结束！")
 
 

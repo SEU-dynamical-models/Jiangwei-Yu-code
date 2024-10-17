@@ -13,13 +13,20 @@ from PyQt5.QtWidgets import QDialog, QApplication, QLabel, QSpacerItem, QSizePol
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import QTimer, QTime, Qt
 from PyQt5.QtMultimedia import QSound
+import api
 
+'''
+肌动测试类，弹出肌动测试窗口，肌动测试包括颈部肌肉和手臂肌肉
+左右摇头各5次
+上下摇头各5次
+左右手水平抬起各10次
+'''
 
 class Musc_test_Window(QDialog):
     def __init__(self):
         super(Musc_test_Window, self).__init__()
         self.setWindowTitle("肌动伪迹采集")
-        self.resize(2600,1600)
+        self.resize(580,580)
 
         # 创建显示倒计时的 QLabel
         layout = QtWidgets.QVBoxLayout(self)  # 创建一个 QVBoxLayout 布局管理器
@@ -31,43 +38,48 @@ class Musc_test_Window(QDialog):
         layout.addWidget(self.timer_label, alignment=Qt.AlignCenter)
 
         # 创建定时器
-        self.leftright_timer = QTimer(self)
-        self.updown_timer = QTimer(self)
-        self.arm_timer = QTimer(self)
+        self.leftright_timer = QTimer(self)#左右摇头计时
+        self.updown_timer = QTimer(self)#上下摇头计时
+        self.arm_timer = QTimer(self)#手臂抬起计时
         self.leftright_timer.timeout.connect(self.leftright_repeat)
         self.updown_timer.timeout.connect(self.updown_repeat)
         self.arm_timer.timeout.connect(self.arm_repeat)
 
-    def reminder(self):
-        self.repeat_times = 4
-        self.count = 0
-        self.label = 0
-        self.leftright_timer.start(3000)
+    def reminder(self):#此函数为开启整轮肌动测试的初始函数，首先开始左右摇头测试
+        self.repeat_times = 10  #左右摇头共10次，各5次
+        self.count = 0 #记录提示次数，实现摇头提示和回正提示
+        self.label = 0 #区分向左和向右
+        self.leftright_timer.start(3000) #每次间隔3秒
 
     def leftright_repeat(self):
         self.count += 1
         self.play_alarm()
-        self.timer_label.hide()
+        self.timer_label.hide() #在做出下一个摇头提示前，隐藏上一个摇头提示
         if (self.count % 2) == 1 and self.repeat_times != 0:
+            if self.count != 1 :
+                api.mark(0)
             self.timer_label.show()
             if self.label == 0 :
                 QSound.play("左摇头.wav")
+                api.mark(5)
                 self.timer_label.setText("向左摇头")
                 self.label = 1
             else:
                 QSound.play("右摇头.wav")
+                api.mark(6)
                 self.timer_label.setText("向右摇头")
                 self.label = 0
             self.repeat_times -= 1
         elif self.repeat_times == 0:
             self.leftright_timer.stop()
+            api.mark(0)
             self.updown_reminder()
 
 
-    def updown_reminder(self):
-        self.count = 0
-        self.label = 0
-        self.repeat_times = 4
+    def updown_reminder(self):#调用此函数开始上下摇头测试
+        self.count = 0 #记录提示次数，实现摇头提示和回正提示
+        self.label = 0 #区分向上和向下摇头
+        self.repeat_times = 10 #上下摇头共10次，各5次
         self.updown_timer.start(3000)
 
     def updown_repeat(self):
@@ -75,24 +87,29 @@ class Musc_test_Window(QDialog):
         self.play_alarm()
         self.timer_label.hide()
         if (self.count % 2) == 1 and self.repeat_times != 0:
+            if self.count != 1 :
+                api.mark(0)
             self.timer_label.show()
             if self.label == 0:
                 QSound.play("上摇头.wav")
+                api.mark(7)
                 self.timer_label.setText("向上摇头")
                 self.label = 1
             else:
                 QSound.play("下摇头.wav")
+                api.mark(8)
                 self.timer_label.setText("向下摇头")
                 self.label = 0
             self.repeat_times -= 1
         elif self.repeat_times == 0:
             self.updown_timer.stop()
+            api.mark(0)
             self.arm_reminder()
 
-    def arm_reminder(self):
-        self.count = 0
-        self.label = 0
-        self.repeat_times = 4
+    def arm_reminder(self):#调用此函数开启左右抬手测试
+        self.count = 0 #记录提示次数，实现抬手提示和回正提示
+        self.label = 0 #区分抬左臂和抬右臂
+        self.repeat_times = 20 #抬左右手共20次，各10次
         self.arm_timer.start(3000)
 
     def arm_repeat(self):
@@ -100,18 +117,23 @@ class Musc_test_Window(QDialog):
         self.play_alarm()
         self.timer_label.hide()
         if (self.count % 2) == 1 and self.repeat_times != 0:
+            if self.count != 1 :
+                api.mark(0)
             self.timer_label.show()
             if self.label == 0:
                 QSound.play("左手.wav")
+                api.mark(9)
                 self.timer_label.setText("左手水平抬起")
                 self.label = 1
             else:
                 QSound.play("右手.wav")
+                api.mark(10)
                 self.timer_label.setText("右手水平抬起")
                 self.label = 0
             self.repeat_times -= 1
         elif self.repeat_times == 0:
             self.arm_timer.stop()
+            api.mark(0)
             self.timer_label.show()
             self.play_alarm()
             QSound.play("结束.wav")

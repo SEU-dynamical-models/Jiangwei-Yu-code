@@ -18,8 +18,14 @@ from Musc import Musc_test_Window
 from Tongue import Tongue_test_Window
 from Jaw import Jaw_test_Window
 from Forehead import Forehead_test_Window
+import api
 
 
+
+
+'''
+NewWindow类，在点击’开始采集‘按钮后，弹出新的窗口，该窗口提供所有需要的测试按钮
+'''
 class NewWindow(QDialog):
     def __init__(self):
         super(NewWindow, self).__init__()
@@ -27,7 +33,7 @@ class NewWindow(QDialog):
         # desktop = QApplication.desktop()
         # rect = desktop.frameSize()
         # self.resize(QtCore.QSize(rect.width(), rect.height()))
-        self.resize(2600, 1600)
+        self.resize(580, 580)
         layout = QtWidgets.QVBoxLayout(self)
 
         # 创建显示倒计时的 QLabel
@@ -42,13 +48,13 @@ class NewWindow(QDialog):
         button_font.setPointSize(20)  # 设置字体大小
         layout.addStretch()
 
-        # 创建 QTimer 对象并设置时间间隔为 1 秒（1000 毫秒）
+        #创建基线测试和其他测试准备倒计时的timer
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_timer)
 
         self.baseline_button = QtWidgets.QPushButton("基线测试", self)
         self.baseline_button.clicked.connect(self.play_alarm)
-        self.baseline_button.clicked.connect(lambda: self.start_timer(60))
+        self.baseline_button.clicked.connect(lambda: self.start_timer(120))
         layout.addWidget(self.baseline_button, alignment=Qt.AlignCenter)
         self.baseline_button.setMinimumSize(QtCore.QSize(1000, 100))
         self.baseline_button.setFont(button_font)
@@ -89,7 +95,12 @@ class NewWindow(QDialog):
         self.close_button.setMinimumSize(QtCore.QSize(1000, 100))
         self.close_button.setFont(button_font)
 
+    '''
+    start_timer函数，开启基线测试或其他测试准备倒计时，callback即倒计时结束需要调用的函数
+    '''
     def start_timer(self, duration, callback=None):
+        if callback is None:
+            api.mark(1)
         self.remaining_time = duration
         self.timer.start(1000)  # 每秒更新一次
         self.update_timer()
@@ -104,6 +115,8 @@ class NewWindow(QDialog):
         # 如果时间到了，停止计时器
         if self.remaining_time <= 0:
             self.timer.stop()
+            if self.callback is None:
+                api.mark(0)
             self.timer_label.setText("时间到！")
             self.play_alarm()  # 播放提示音
             if self.callback:
@@ -115,13 +128,21 @@ class NewWindow(QDialog):
         # 播放声音，确保你有这个文件
         QSound.play("alert.wav")  # 音频文件路径
 
+    '''
+    准备倒计时3秒后，开始眼动测试
+    '''
+
     def eyem_test(self):
         self.start_timer(3, self.show_eyem_test)
 
     def show_eyem_test(self):
-        test = Eyem_test_Window()
-        test.start_dot_animation()
+        test = Eyem_test_Window()#先创建窗口对象
+        test.start_dot_animation()#调用开启运行的函数
         test.exec()
+
+    '''
+    准备倒计时3秒后，开始肌动测试
+    '''
 
     def musc_test(self):
         self.start_timer(3, self.show_musc_test)
@@ -131,6 +152,9 @@ class NewWindow(QDialog):
         test.reminder()
         test.exec()
 
+    '''
+    准备倒计时3秒后，开始舌动测试
+    '''
     def tongue_test(self):
         self.start_timer(3, self.show_tongue_test)
 
@@ -138,6 +162,10 @@ class NewWindow(QDialog):
         test = Tongue_test_Window()
         test.reminder_3times()
         test.exec()
+
+    '''
+    准备倒计时3秒后，开始下颚测试
+    '''
 
     def jaw_test(self):
         self.start_timer(3, self.show_jaw_test)
@@ -147,6 +175,10 @@ class NewWindow(QDialog):
         test.reminder()
         test.exec()
 
+    '''
+    准备倒计时3秒后，开始上额测试
+    '''
+
     def forehead_test(self):
         self.start_timer(3, self.show_forehead_test)
 
@@ -155,11 +187,14 @@ class NewWindow(QDialog):
         test.reminder()
         test.exec()
 
+'''
+Ui_MainWindow类，即主窗口，包含‘开始测试’和‘退出’两个按钮
+'''
 
 class Ui_MainWindow(object):
-    def setupUi(self, MainWindow):
+    def setupUi(self, MainWindow):  #对界面进行美化
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1600, 1200)
+        MainWindow.resize(580, 580)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -213,6 +248,7 @@ class Ui_MainWindow(object):
 
     def collect(self):
         new_window = NewWindow()  # 创建新窗口实例
+        #api.start() # 链接脑电采集软件的api，实现自动打标
         new_window.exec_()  # 显示窗口
 
 
