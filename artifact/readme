@@ -1,5 +1,4 @@
 此为伪迹采集系统，train.py为主程序，neuracle_lib为链接软件的api代码，api.py实现打标功能
 
-在终端pip install pyinstaller后，在train.py的根目录下执行pyinstaller -w -D train.py
-
+在终端pip install pyinstaller后，在train.py的根目录下执行pyinstaller -w -D test.py
 确保wav音频文件存在
