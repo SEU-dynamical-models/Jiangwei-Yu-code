@@ -16,10 +16,9 @@ from PyQt5.QtMultimedia import QSound
 import api
 
 '''
-肌动测试类，弹出肌动测试窗口，肌动测试包括颈部肌肉和手臂肌肉
+肌动测试类，弹出肌动测试窗口，肌动测试为颈部肌肉
 左右摇头各5次
 上下摇头各5次
-左右手水平抬起各10次
 '''
 
 class Musc_test_Window(QDialog):
@@ -40,10 +39,8 @@ class Musc_test_Window(QDialog):
         # 创建定时器
         self.leftright_timer = QTimer(self)#左右摇头计时
         self.updown_timer = QTimer(self)#上下摇头计时
-        self.arm_timer = QTimer(self)#手臂抬起计时
         self.leftright_timer.timeout.connect(self.leftright_repeat)
         self.updown_timer.timeout.connect(self.updown_repeat)
-        self.arm_timer.timeout.connect(self.arm_repeat)
 
     def reminder(self):#此函数为开启整轮肌动测试的初始函数，首先开始左右摇头测试
         self.repeat_times = 10  #左右摇头共10次，各5次
@@ -104,40 +101,44 @@ class Musc_test_Window(QDialog):
         elif self.repeat_times == 0:
             self.updown_timer.stop()
             api.mark(0)
-            self.arm_reminder()
-
-    def arm_reminder(self):#调用此函数开启左右抬手测试
-        self.count = 0 #记录提示次数，实现抬手提示和回正提示
-        self.label = 0 #区分抬左臂和抬右臂
-        self.repeat_times = 20 #抬左右手共20次，各10次
-        self.arm_timer.start(3000)
-
-    def arm_repeat(self):
-        self.count += 1
-        self.play_alarm()
-        self.timer_label.hide()
-        if (self.count % 2) == 1 and self.repeat_times != 0:
-            if self.count != 1 :
-                api.mark(0)
-            self.timer_label.show()
-            if self.label == 0:
-                QSound.play("左手.wav")
-                api.mark(9)
-                self.timer_label.setText("左手水平抬起")
-                self.label = 1
-            else:
-                QSound.play("右手.wav")
-                api.mark(10)
-                self.timer_label.setText("右手水平抬起")
-                self.label = 0
-            self.repeat_times -= 1
-        elif self.repeat_times == 0:
-            self.arm_timer.stop()
-            api.mark(0)
-            self.timer_label.show()
             self.play_alarm()
             QSound.play("结束.wav")
+            self.timer_label.show()
             self.timer_label.setText("肌动测试结束！")
+            #self.arm_reminder()
+
+    # def arm_reminder(self):#调用此函数开启左右抬手测试
+    #     self.count = 0 #记录提示次数，实现抬手提示和回正提示
+    #     self.label = 0 #区分抬左臂和抬右臂
+    #     self.repeat_times = 20 #抬左右手共20次，各10次
+    #     self.arm_timer.start(3000)
+
+    # def arm_repeat(self):
+    #     self.count += 1
+    #     self.play_alarm()
+    #     self.timer_label.hide()
+    #     if (self.count % 2) == 1 and self.repeat_times != 0:
+    #         if self.count != 1 :
+    #             api.mark(0)
+    #         self.timer_label.show()
+    #         if self.label == 0:
+    #             QSound.play("左手.wav")
+    #             api.mark(9)
+    #             self.timer_label.setText("左手水平抬起")
+    #             self.label = 1
+    #         else:
+    #             QSound.play("右手.wav")
+    #             api.mark(10)
+    #             self.timer_label.setText("右手水平抬起")
+    #             self.label = 0
+    #         self.repeat_times -= 1
+    #     elif self.repeat_times == 0:
+    #         self.arm_timer.stop()
+    #         api.mark(0)
+    #         self.timer_label.show()
+    #         self.play_alarm()
+    #         QSound.play("结束.wav")
+    #         self.timer_label.setText("肌动测试结束！")
 
 
 
